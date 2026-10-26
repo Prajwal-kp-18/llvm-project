@@ -51,6 +51,75 @@ entry:
   ret <1 x i1> %conv
 }
 
+; fp128 vectors are split down to <1 x fp128>, and both the operand and the
+; promoted <1 x i128> compare result are scalarized. The scalar compare must
+; produce i1, not the illegal i128.
+define <2 x i1> @test_fcmp_v2f128(<2 x fp128> %x, <2 x fp128> %y) #0 {
+; CHECK-LABEL: test_fcmp_v2f128:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    stp d9, d8, [sp, #32] ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    stp q0, q2, [sp] ; 32-byte Folded Spill
+; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:    mov.16b v1, v3
+; CHECK-NEXT:    bl ___eqtf2
+; CHECK-NEXT:    ldp q0, q1, [sp] ; 32-byte Folded Reload
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    fmov d8, x8
+; CHECK-NEXT:    bl ___eqtf2
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    zip1.2s v0, v0, v8
+; CHECK-NEXT:    ldp d9, d8, [sp, #32] ; 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ret
+entry:
+  %conv = tail call <2 x i1> @llvm.experimental.constrained.fcmp.v2f128(<2 x fp128> %x, <2 x fp128> %y, metadata !"oeq", metadata !"fpexcept.strict")
+  ret <2 x i1> %conv
+}
+
+define <2 x i1> @test_fcmps_v2f128(<2 x fp128> %x, <2 x fp128> %y) #0 {
+; CHECK-LABEL: test_fcmps_v2f128:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    stp d9, d8, [sp, #32] ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset b8, -24
+; CHECK-NEXT:    .cfi_offset b9, -32
+; CHECK-NEXT:    stp q0, q2, [sp] ; 32-byte Folded Spill
+; CHECK-NEXT:    mov.16b v0, v1
+; CHECK-NEXT:    mov.16b v1, v3
+; CHECK-NEXT:    bl ___eqtf2
+; CHECK-NEXT:    ldp q0, q1, [sp] ; 32-byte Folded Reload
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    fmov d8, x8
+; CHECK-NEXT:    bl ___eqtf2
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
+; CHECK-NEXT:    csetm x8, eq
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    zip1.2s v0, v0, v8
+; CHECK-NEXT:    ldp d9, d8, [sp, #32] ; 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ret
+entry:
+  %conv = tail call <2 x i1> @llvm.experimental.constrained.fcmps.v2f128(<2 x fp128> %x, <2 x fp128> %y, metadata !"oeq", metadata !"fpexcept.strict")
+  ret <2 x i1> %conv
+}
+
 attributes #0 = { strictfp }
 
 declare <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i1(<1 x i1>, metadata, metadata)

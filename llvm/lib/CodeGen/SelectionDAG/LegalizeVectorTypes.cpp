@@ -411,7 +411,11 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_StrictFPOp(SDNode *N) {
   EVT VT = N->getValueType(0).getVectorElementType();
   unsigned NumOpers = N->getNumOperands();
   SDValue Chain = N->getOperand(0);
-  EVT ValueVTs[] = {VT, MVT::Other};
+  // A scalar compare produces i1, which is extended below. See the similar
+  // logic in ScalarizeVecRes_SETCC.
+  bool IsSetCC = N->getOpcode() == ISD::STRICT_FSETCC ||
+                 N->getOpcode() == ISD::STRICT_FSETCCS;
+  EVT ValueVTs[] = {IsSetCC ? MVT::i1 : VT, MVT::Other};
   SDLoc dl(N);
 
   SmallVector<SDValue, 4> Opers(NumOpers);
@@ -441,6 +445,11 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_StrictFPOp(SDNode *N) {
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Result.getValue(1));
+
+  // Vectors may have a different boolean contents to scalars.
+  if (IsSetCC)
+    return DAG.getBoolExtOrTrunc(Result, dl, VT,
+                                 N->getOperand(1).getValueType());
   return Result;
 }
 
